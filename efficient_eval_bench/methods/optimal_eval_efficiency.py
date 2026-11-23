@@ -42,7 +42,7 @@ def optimal_eval_efficiency_budgets(
         not_in = list(set(range(n_items)) - set(current))
         current_sum = S[current].sum(axis=0)
 
-        def _obj(s: np.ndarray) -> float:
+        def _obj(s: np.ndarray, k: int = k) -> float:
             return float(np.sum((s / k - true_means) ** 2))
 
         current_obj = _obj(current_sum)

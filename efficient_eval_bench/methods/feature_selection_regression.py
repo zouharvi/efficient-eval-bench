@@ -2,7 +2,7 @@ import random
 from typing import Literal
 
 import numpy as np
-from scipy.spatial import cKDTree
+from scipy.spatial import KDTree
 from scipy.special import psi
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.linear_model import RidgeCV
@@ -39,7 +39,7 @@ class MRMRPred:
         self.continuous_mi_k = continuous_mi_k
         self.kernel_degree = kernel_degree
 
-        self.compressed_data_indices = None
+        self.compressed_data_indices: np.ndarray = np.array([], dtype=int)
         self.rgs = None
         self._binary = None
         self.alpha_ = None
@@ -72,7 +72,7 @@ class MRMRPred:
 
         rgs = RidgeCV(alphas=alphas)
         rgs.fit(X, y.reshape(-1, 1))
-        self.alpha_ = float(rgs.alpha_)
+        self.alpha_ = float(rgs.alpha_) if rgs.alpha_ is not None else None
         return rgs
 
     @staticmethod
@@ -169,9 +169,9 @@ class MRMRPred:
         if nx0 < k + 1 or nx1 < k + 1:
             return 0.0
 
-        tree0 = cKDTree(y0)
-        tree1 = cKDTree(y1)
-        tree_all = cKDTree(y.reshape(-1, 1))
+        tree0 = KDTree(y0)
+        tree1 = KDTree(y1)
+        tree_all = KDTree(y.reshape(-1, 1))
 
         m_list = []
         for i in range(n):
@@ -344,7 +344,7 @@ class MRMRPred:
             rel = relevance_per_idx[remaining_arr]
             if self.method == "miq":
                 scores = rel / (mean_red + 1e-10)
-            elif self.method == "mid":
+            else:
                 scores = rel - mean_red
 
             winner_pos = np.argmax(scores)
@@ -385,6 +385,7 @@ class MRMRPred:
         """
         if len(target_coreset_scores.shape) == 1:
             target_coreset_scores = target_coreset_scores.reshape(1, -1)
+        assert self.rgs is not None
         return self.rgs.predict(target_coreset_scores).ravel()
 
 

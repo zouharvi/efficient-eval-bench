@@ -20,13 +20,10 @@ def diffuse_budgets(data: Data, budgets: Budgets, seed: int = 0, **kwargs) -> Mo
     n_models = len(models)
     n_items = len(data)
 
-    if "embedding" in data[0]:
-        base_emb = np.array([item["embedding"] for item in data], dtype=float)
-    else:
-        base_emb = np.array(
-            [[item["scores_metrics"][m][metric] for m in models] for item in data],
-            dtype=float,
-        )
+    base_emb = np.array(
+        [item["embedding"] if "embedding" in item else [item["scores_metrics"][m][metric] for m in models] for item in data],
+        dtype=float,
+    )
 
     # Discrepancy representation: item embedding modulated by cross-model deviation
     S_metric = np.array([[item["scores_metrics"][m][metric] for m in models] for item in data], dtype=float)

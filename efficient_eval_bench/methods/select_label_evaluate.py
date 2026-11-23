@@ -24,13 +24,10 @@ def select_label_evaluate_budgets(
     n_models = len(models)
     n_items = len(data)
 
-    if "embedding" in data[0]:
-        embeddings = np.array([item["embedding"] for item in data], dtype=float)
-    else:
-        embeddings = np.array(
-            [[item["scores_metrics"][m][metric] for m in models] for item in data],
-            dtype=float,
-        )
+    embeddings = np.array(
+        [item["embedding"] if "embedding" in item else [item["scores_metrics"][m][metric] for m in models] for item in data],
+        dtype=float,
+    )
 
     S_metric = np.array([[item["scores_metrics"][m][metric] for m in models] for item in data], dtype=float)
     uncertainty = np.std(S_metric, axis=1)

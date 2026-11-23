@@ -32,7 +32,7 @@ class AnnotatorDrift:
 
 def load_data_synth(
     seed=0,
-    models=20,
+    models=16,
     items=500,
     model_heterosced: float = 0.0,
     item_heterosced: float = 0.0,
@@ -187,6 +187,7 @@ def load_data_subset2evaluate_summeval():
     return data_new
 
 
+load_data_base: Callable[..., Data] = functools.partial(load_data_synth)
 load_data_binary: Callable[..., Data] = functools.partial(load_data_synth, bins=[0, 1])
 load_data_likert: Callable[..., Data] = functools.partial(load_data_synth, bins=[0, 0.25, 0.5, 0.75, 1])
 load_data_4models: Callable[..., Data] = functools.partial(load_data_synth, models=4, model_heterosced=0.0)
@@ -243,6 +244,7 @@ load_data_annot_replacement3: Callable[..., Data] = functools.partial(
 
 
 _DATA: dict[str, Callable[..., Data]] = {
+    "base": load_data_base,
     "4 models": load_data_4models,
     "16 models": load_data_16models,
     "64 models": load_data_64models,

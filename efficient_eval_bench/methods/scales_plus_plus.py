@@ -27,13 +27,10 @@ def scales_plus_plus_budgets(
     n_items = len(data)
 
     # Extract item embeddings or fallback to proxy metric vector
-    if "embedding" in data[0]:
-        embeddings = np.array([item["embedding"] for item in data], dtype=float)
-    else:
-        embeddings = np.array(
-            [[item["scores_metrics"][m][metric] for m in models] for item in data],
-            dtype=float,
-        )
+    embeddings = np.array(
+        [item["embedding"] if "embedding" in item else [item["scores_metrics"][m][metric] for m in models] for item in data],
+        dtype=float,
+    )
 
     # Reduce dimensionality with PCA as in Scales++ (to 3 dimensions)
     d = min(n_pca_components, embeddings.shape[1], n_items)

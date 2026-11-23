@@ -24,17 +24,18 @@ def _precompute_gittins_roots(H: int, c: float, v0: float = 0.04, tau2: float = 
     r_next = 0.0
 
     for n in range(H - 1, -1, -1):
-        sig = sigma[n]
+        sig = float(sigma[n])
         if sig < 1e-8 or c <= 0:
             roots[n] = r_next
             continue
 
-        def obj(delta: float) -> float:
-            z = delta / sig
-            return float(delta * scipy.stats.norm.cdf(z) + sig * scipy.stats.norm.pdf(z) - c)
+        def obj(delta: float, s: float = sig) -> float:
+            z = delta / s
+            return float(delta * scipy.stats.norm.cdf(z) + s * scipy.stats.norm.pdf(z) - c)
 
         try:
-            delta = scipy.optimize.brentq(obj, -10.0 * sig, max(10.0 * sig, 5.0 * c + 2.0))
+            res = scipy.optimize.brentq(obj, -10.0 * sig, max(10.0 * sig, 5.0 * c + 2.0))
+            delta = float(res[0] if isinstance(res, tuple) else res)
         except ValueError:
             delta = 0.0
         r_n = r_next + delta

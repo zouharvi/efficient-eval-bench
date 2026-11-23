@@ -6,6 +6,7 @@ typst/
 computed/
 environment.yml
 .DS_Store
+papers.bib
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -68,7 +68,7 @@ def one_hundred_instances_budgets(
         # Determine number of reference instances affordable across models
         cum_costs = np.cumsum(costs[selected_indices]) * n_models
         affordable = np.searchsorted(cum_costs, b, side="right")
-        k = max(1, min(affordable, n_items))
+        k = max(1, min(int(affordable), n_items))
 
         ref_idx = selected_indices[:k]
         if k >= n_items:

@@ -35,13 +35,11 @@ def smart_filtering_budgets(
         candidate_indices = list(range(n_items))
 
     # 2. Embedding-based deduplication
-    if "embedding" in data[0]:
-        cand_embeddings = np.array([data[i]["embedding"] for i in candidate_indices], dtype=float)
-    else:
-        cand_embeddings = np.array(
-            [[data[i]["scores_metrics"][m][metric] for m in models] for i in candidate_indices],
-            dtype=float,
-        )
+    cand_items = [data[i] for i in candidate_indices]
+    cand_embeddings = np.array(
+        [item["embedding"] if "embedding" in item else [item["scores_metrics"][m][metric] for m in models] for item in cand_items],
+        dtype=float,
+    )
 
     sim_matrix = cosine_similarity(cand_embeddings)
     vars_cand = np.array([float(np.std([data[i]["scores_metrics"][m][metric] for m in models])) for i in candidate_indices])

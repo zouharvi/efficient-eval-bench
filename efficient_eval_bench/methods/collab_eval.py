@@ -73,7 +73,7 @@ def collab_eval_budgets(
 
         if actual_rank < min(n_models, n_items):
             svd = TruncatedSVD(n_components=actual_rank, random_state=seed)
-            S_hat = svd.fit_transform(M) @ svd.components_
+            S_hat = svd.inverse_transform(svd.fit_transform(M))
         else:
             S_hat = M.copy()
         S_hat = np.clip(S_hat, 0.0, 1.0)

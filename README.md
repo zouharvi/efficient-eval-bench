@@ -12,7 +12,7 @@
 First install this repository locally with `pip install -e .`.
 The `efficient_eval_really/methods` includes all the methods with unified callable signature that is run on all the setups in `efficient_eval_really/data` when running
 ```bash
-python3 scripts/01-run_all.py`
+python scripts/01-run_all.py
 ```
 
 By default this script will re-use existing results and will not recompute them (can be turned off with `--no-reuse`).

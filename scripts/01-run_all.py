@@ -1,12 +1,12 @@
 import argparse
 import functools
-import json
 import multiprocessing
 import os
 import statistics
 import time
 
 import numpy as np
+import toml
 import tqdm
 
 import efficient_eval_really.methods
@@ -14,7 +14,7 @@ import efficient_eval_really.utils
 from efficient_eval_really.data import get_data_dict_all, shuffle_items
 
 args = argparse.ArgumentParser()
-args.add_argument("--no-reuse", action="store_true", help="Don't reuse results from computed/01-results_all.json even if it exists")
+args.add_argument("--no-reuse", action="store_true", help="Don't reuse results from computed/01-results_all.toml even if it exists")
 args.add_argument("--workers", type=int, default=10, help="Number of workers for parallelization. 0 turns off parallelization.")
 args = args.parse_args()
 
@@ -22,9 +22,9 @@ os.chdir(os.path.dirname(__file__) + "/../")
 os.makedirs("computed", exist_ok=True)
 
 # load previous results if they happen to exist
-if os.path.exists("computed/01-results_all.json") and not args.no_reuse:
-    with open("computed/01-results_all.json", "r") as f:
-        results_out = json.load(f)
+if os.path.exists("computed/01-results_all.toml") and not args.no_reuse:
+    with open("computed/01-results_all.toml", "r") as f:
+        results_out = toml.load(f)
 else:
     results_out = {}
 
@@ -105,5 +105,5 @@ for method_name, results_local, data_name, runtime_avg in tqdm.tqdm(results):
     else:
         results_out[method_name][data_name]["runtime"] = runtime_avg
 
-with open("computed/01-results_all.json", "w") as f:
-    json.dump(results_out, f, indent=2)
+with open("computed/01-results_all.toml", "w") as f:
+    toml.dump(results_out, f)

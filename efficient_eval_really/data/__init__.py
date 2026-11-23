@@ -242,9 +242,7 @@ load_data_annot_replacement3: Callable[..., Data] = functools.partial(
 )
 
 
-# TODO: some selector for src-based? or maybe the method should return None if it isn't supported?
-# TODO: mark how many times the dataset should be run and averaged
-_DATA: dict[str, Callable[[], Data]] = {
+_DATA: dict[str, Callable[..., Data]] = {
     "4 models": load_data_4models,
     "16 models": load_data_16models,
     "64 models": load_data_64models,
@@ -274,8 +272,8 @@ _DATA: dict[str, Callable[[], Data]] = {
 }
 
 
-def get_data_dict_all() -> dict[str, Data]:
-    return {k: v() for k, v in _DATA.items()}
+def get_data_dict_all(seed: int = 0) -> dict[str, Data]:
+    return {k: v(seed=seed) for k, v in _DATA.items()}
 
 
 def shuffle_items(data: Data, seed: int) -> Data:

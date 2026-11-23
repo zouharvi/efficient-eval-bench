@@ -1,5 +1,5 @@
 [project]
-name = "efficient-evaluation-really"
+name = "efficient-eval-bench"
 version = "0.0.0"
 description = "Critical perspective on efficient evaluation"
 readme = "README.md"
@@ -26,12 +26,12 @@ dependencies = [
 dev = ["pytest"]
 
 [project.urls]
-Repository = "https://github.com/zouharvi/efficient-eval-really"
-Issues = "https://github.com/zouharvi/efficient-eval-really/issues"
+Repository = "https://github.com/zouharvi/efficient-eval-bench"
+Issues = "https://github.com/zouharvi/efficient-eval-bench/issues"
 
 [tool.setuptools]
-package-dir = { efficient_eval_really = "efficient_eval_really" }
-packages = ["efficient_eval_really"]
+package-dir = { efficient_eval_bench = "efficient_eval_bench" }
+packages = ["efficient_eval_bench"]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -47,5 +47,5 @@ line-length = 200
 
 # just run "pyright"
 [tool.pyright]
-include = ["efficient_eval_really", "scripts"]
+include = ["efficient_eval_bench", "scripts"]
 

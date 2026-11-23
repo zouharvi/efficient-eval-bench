@@ -1,0 +1,67 @@
+import numpy as np
+
+from efficient_eval_bench.methods import (
+    Budgets,
+    Data,
+    ModelScoresAtBudget,
+    ModelScoresSubset,
+)
+
+
+def _kmedoids(D: np.ndarray, k: int, seed: int = 0) -> list[int]:  # D= Distance Matrix of Items, k= number of clusters
+    """Implements PAM K-Medoids on a precomputed distance matrix."""
+    n = D.shape[0]  # n=number of items
+    if k >= n:  # edge case with less items that desired clusters
+        return list(range(n))
+    medoids = list(np.random.default_rng(seed).choice(n, k, replace=False))
+    for _ in range(100):  # at most 100 iterations of the PAM update loop
+        assignments = np.argmin(D[:, medoids], axis=1)
+        new_medoids = []
+        for c in range(k):
+            members = np.where(assignments == c)[0]
+            new_medoids.append(medoids[c] if len(members) == 0 else int(members[np.argmin(D[np.ix_(members, members)].sum(1))]))
+        if new_medoids == medoids:
+            break
+        medoids = new_medoids
+    return medoids
+
+
+def tailored_benchmarks_budgets(data: Data, budgets: Budgets, g_frac: float = 0.5, seed: int = 0, **kwargs) -> ModelScoresAtBudget:
+    """TailoredBench: per-model tailored item subsets via K-Medoids."""
+    from sklearn.metrics import pairwise_distances
+    from sklearn.preprocessing import StandardScaler
+
+    models = list(data[0]["scores"].keys())
+    metric = next(iter(data[0]["scores_metrics"][models[0]]))
+    S = np.array([[item["scores_metrics"][m][metric] for m in models] for item in data])  # (n_items, n_models)
+    n_items, n_models = S.shape
+
+    def D(X: np.ndarray) -> np.ndarray:
+        return pairwise_distances(StandardScaler().fit_transform(X), metric="manhattan")
+
+    results: ModelScoresAtBudget = []
+    for budget in budgets:
+        k = max(1, min(budget // n_models, n_items))
+        k_g = max(1, round(k * g_frac))
+
+        # k-Medoids on standardized item vectors (items × models)
+        g_set = _kmedoids(D(S), k_g, seed=seed)
+
+        if k == k_g:
+            results.append({m: [data[i]["scores"][m] for i in g_set] for m in models})
+            continue
+
+        # per-model tailored N-set
+        D_models = D(S[g_set].T)  # (n_models, n_models)
+        threshold = D_models[np.triu_indices(n_models, k=1)].mean()
+        n_src = max(1, min(int(np.mean((D_models <= threshold).sum(axis=1) - 1)), n_models - 1))
+
+        model_scores_subset: ModelScoresSubset = {}
+        for i, model in enumerate(models):
+            src = list(np.argsort(np.where(np.arange(n_models) == i, np.inf, D_models[i]))[:n_src])
+            n_set = _kmedoids(D(S[:, src]), k, seed=i)
+            model_scores_subset[model] = [data[j]["scores"][model] for j in n_set]
+
+        results.append(model_scores_subset)
+
+    return results

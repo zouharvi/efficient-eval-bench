@@ -9,9 +9,9 @@ import numpy as np
 import toml
 import tqdm
 
-import efficient_eval_really.methods
-import efficient_eval_really.utils
-from efficient_eval_really.data import get_data_dict_all, shuffle_items
+import efficient_eval_bench.methods
+import efficient_eval_bench.utils
+from efficient_eval_bench.data import get_data_dict_all, shuffle_items
 
 args = argparse.ArgumentParser()
 args.add_argument("--no-reuse", action="store_true", help="Don't reuse results from computed/01-results_all.toml even if it exists")
@@ -35,7 +35,7 @@ BUDGETS_FRAC = np.linspace(0.1, 1.0, 10)
 
 # prepare the parallelization queue
 parallelization_queue = []
-for method_name, method_fn in efficient_eval_really.methods.METHODS_BUDGETS.items():
+for method_name, method_fn in efficient_eval_bench.methods.METHODS_BUDGETS.items():
     results_out[method_name] = results_out.get(method_name, {})
     for DATA in DATA_BY_SEED:
         for data_name, data in DATA.items():
@@ -66,7 +66,7 @@ def _my_compute_method_with_data(x):
         model_scores_all = {model: [item.get("scores_true", item["scores"])[model] for item in data_cur] for model in data_cur[0]["scores"]}
         model_scores_subset_at_budgets = method_fn(data_cur, budgets, seed=s)
         res_seed = [
-            efficient_eval_really.utils.meta_evaluate_scores_subset(model_scores_subset_at_budget, model_scores_all)
+            efficient_eval_bench.utils.meta_evaluate_scores_subset(model_scores_subset_at_budget, model_scores_all)
             for model_scores_subset_at_budget in model_scores_subset_at_budgets
         ]
         all_seed_results.append(res_seed)

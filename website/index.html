@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore efficient model evaluation across methods, synthetic scenarios, and four evaluation objectives. Results from Efficient Eval Bench.">
+  <meta name="theme-color" content="#ffffff">
+  <title>Efficient Eval Bench</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="scenarios.js" defer></script>
+  <script src="results-parser.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#results">Skip to results</a>
+  <div class="page">
+    <header class="masthead">
+      <a class="wordmark" href="./" aria-label="Efficient Eval Bench home">Efficient Eval Bench<span class="wordmark-period">.</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#data">Data statement</a>
+        <a href="https://github.com/zouharvi/efficient-eval-bench">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">An open benchmark for model evaluation</p>
+        <h1 id="page-title">Efficient Eval Bench</h1>
+        <p class="lede">Comparing efficient evaluation methods across scenarios and objectives.</p>
+        <p class="scope"><span id="method-count">…</span> methods<span class="separator">/</span><span id="scenario-count">…</span> scenarios<span class="separator">/</span>4 evaluation objectives</p>
+      </section>
+
+      <section id="results" class="results" aria-labelledby="results-title">
+        <div class="section-heading">
+          <h2 id="results-title">The results</h2>
+          <a class="download-link" href="../computed/01-results_all.toml" download="efficient-eval-bench-results.toml">Download results <span class="file-type">TOML</span></a>
+        </div>
+        <p id="load-error" role="alert" hidden></p>
+        <div class="controls">
+          <div class="scenario-control">
+            <label for="scenario">Scenario</label>
+            <div class="select-wrap">
+              <select id="scenario" aria-describedby="scenario-description">
+                <option value="base">Loading scenarios…</option>
+              </select>
+            </div>
+          </div>
+          <div class="search-control">
+            <label for="search">Find a method</label>
+            <input id="search" type="search" placeholder="Search methods…" autocomplete="off">
+          </div>
+          <label class="compare-control"><input id="compare" type="checkbox"> Compare with random</label>
+        </div>
+        <p id="scenario-description" class="scenario-description">16 models, 500 items, continuous scores. Automated metric noise σ = 0.05.</p>
+        <p class="scroll-hint">Scroll the table horizontally to see all four metrics.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Benchmark results. Scroll horizontally on small screens.">
+          <table>
+            <caption id="table-caption">Base scenario. Scores are averaged across evaluation budgets and runs. Select a column heading to sort.</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="rank-column"><span class="sr-only">Rank</span><span aria-hidden="true">#</span></th>
+                <th scope="col" class="method-column" aria-sort="none"><button type="button" data-sort="method">Method<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th scope="col" aria-sort="none"><button type="button" data-sort="mae_item">Item-level Score Estimation<span class="sort-mark" aria-hidden="true"></span><span class="metric-label">Item MAE</span></button></th>
+                <th scope="col" aria-sort="none"><button type="button" data-sort="mae_model">Benchmark-level Score Estimation<span class="sort-mark" aria-hidden="true"></span><span class="metric-label">Benchmark MAE</span></button></th>
+                <th scope="col" aria-sort="descending"><button type="button" data-sort="corr_tau">Global Model Ranking<span class="sort-mark" aria-hidden="true"></span><span class="metric-label">Kendall’s Tau</span></button></th>
+                <th scope="col" aria-sort="none"><button type="button" data-sort="corr_wtau">Top-Weighted Model Ranking<span class="sort-mark" aria-hidden="true"></span><span class="metric-label">Weighted Kendall’s Tau</span></button></th>
+              </tr>
+            </thead>
+            <tbody id="baseline-rows"></tbody>
+            <tbody id="result-rows">
+              
+            </tbody>
+          </table>
+        </div>
+        <p id="empty-state" hidden>No methods match your search. Try a shorter name.</p>
+        <div class="table-footer">
+          <p id="result-status" role="status" aria-live="polite">Loading results…</p>
+          <button id="show-all" class="text-button" type="button" hidden>Show all methods</button>
+        </div>
+        <p id="reading-note" class="reading-note">Uniform random sampling is the reference baseline. Values are rounded to three decimals; sorting uses full precision.</p>
+        <noscript><p>Enable JavaScript to load and explore results, or download the original TOML using the link above.</p></noscript>
+      </section>
+
+      <section id="data" class="data-statement" aria-labelledby="data-title">
+        <h2 id="data-title">About the data</h2>
+        <div class="data-copy">
+          <p>This snapshot compares <span id="statement-method-count">…</span> method entries across <span id="statement-scenario-count">…</span> synthetic scenarios.
+            The base scenario contains 16 models and 500 evaluation items, with scores on a 0–1 scale.
+            The scenarios vary model count, score scale, item- and model-dependent noise, automated metric reliability, and annotator behaviour.</p>
+          <p>The evaluation runner averages results over budgets from 10% to 100% of the full model–item matrix and across runs.
+            Item-level Score Estimation measures score estimation error across all model–item pairs using Item MAE.
+            Benchmark-level Score Estimation measures error in each model’s overall benchmark score using Benchmark MAE.
+            Global Model Ranking measures pairwise ordering agreement between estimated and true model rankings using Kendall’s Tau.
+            Top-Weighted Model Ranking measures ranking agreement using Weighted Kendall’s Tau, giving greater weight to agreement near the top of the leaderboard.
+          </p>
+          <p class="data-caveat">These are research results from the repository’s implementations on synthetic data.
+            They should be read in the context of the scenario and evaluation objective, rather than as a universal ordering of methods.</p>
+          <div class="data-links">
+            <a href="https://github.com/zouharvi/efficient-eval-bench/blob/main/efficient_eval_bench/data/__init__.py">Scenario definitions</a>
+            <a href="https://github.com/zouharvi/efficient-eval-bench/blob/main/papers.toml">Method bibliography</a>
+            <a href="https://github.com/zouharvi/efficient-eval-bench/blob/main/scripts/01-run_all.py">Evaluation code</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Efficient Eval Bench</span>
+      <span>A research project on efficient evaluation</span>
+    </footer>
+  </div>
+</body>
+</html>

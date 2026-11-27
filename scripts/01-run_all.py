@@ -1,5 +1,6 @@
 import argparse
 import functools
+import json
 import multiprocessing
 import os
 import statistics
@@ -14,7 +15,7 @@ import efficient_eval_bench.utils
 from efficient_eval_bench.data import get_data_dict_all, shuffle_items
 
 args = argparse.ArgumentParser()
-args.add_argument("--no-reuse", action="store_true", help="Don't reuse results from computed/01-results_all.toml even if it exists")
+args.add_argument("--no-reuse", action="store_true", help="Don't reuse results from computed/01-results_raw.jsonl even if it exists")
 args.add_argument("--workers", type=int, default=20, help="Number of workers for parallelization. 0 turns off parallelization.")
 args.add_argument("--data-seeds", type=int, default=5, help="Number of data seeds to generate and average across.")
 args = args.parse_args()
@@ -23,11 +24,17 @@ os.chdir(os.path.dirname(__file__) + "/../")
 os.makedirs("computed", exist_ok=True)
 
 # load previous results if they happen to exist
-if os.path.exists("computed/01-results_all.toml") and not args.no_reuse:
-    with open("computed/01-results_all.toml", "r") as f:
-        results_out = toml.load(f)
-else:
-    results_out = {}
+RAW_PATH = "computed/01-results_raw.jsonl"
+raw_rows: list[dict] = []
+if os.path.exists(RAW_PATH) and not args.no_reuse:
+    with open(RAW_PATH, "r") as f:
+        for line in f:
+            try:
+                raw_rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                # last line of an interrupted run
+                pass
+computed_keys = {(r["method"], r["scenario"], r["data_seed"]) for r in raw_rows}
 
 # instantiate and load data
 DATA_BY_SEED = [get_data_dict_all(seed=s) for s in range(args.data_seeds)]
@@ -36,21 +43,20 @@ BUDGETS_FRAC = np.linspace(0.1, 1.0, 10)
 # prepare the parallelization queue
 parallelization_queue = []
 for method_name, method_fn in efficient_eval_bench.methods.METHODS_BUDGETS.items():
-    results_out[method_name] = results_out.get(method_name, {})
-    for DATA in DATA_BY_SEED:
+    for data_seed, DATA in enumerate(DATA_BY_SEED):
         for data_name, data in DATA.items():
             # skip if already computed
-            if not args.no_reuse and data_name in results_out[method_name]:
+            if (method_name, data_name, data_seed) in computed_keys:
                 continue
 
             budgets = [int(b * len(data) * len(data[0]["scores"])) for b in BUDGETS_FRAC]
-            parallelization_queue.append((method_name, method_fn, data_name, data, budgets))
+            parallelization_queue.append((method_name, method_fn, data_name, data_seed, data, budgets))
 
 
 
 # do the computation
 def _my_compute_method_with_data(x):
-    method_name, method_fn, data_name, data, budgets = x
+    method_name, method_fn, data_name, data_seed, data, budgets = x
 
     if isinstance(method_fn, functools.partial):
         n_seeds = method_fn.keywords.get("seeds") or 1
@@ -83,35 +89,51 @@ def _my_compute_method_with_data(x):
             b_dict[key] = float(np.mean(valid_vals)) if valid_vals else float("nan")
         results_local.append(b_dict)
 
-    return (method_name, results_local, data_name, runtime_avg)
+    return (method_name, results_local, data_name, data_seed, runtime_avg)
 
-with multiprocessing.Pool(args.workers) as pool:
-    results = list(
-        tqdm.tqdm(
-            pool.imap_unordered(_my_compute_method_with_data, parallelization_queue),
-            total=len(parallelization_queue),
-        )
-    )
+# start the large scenarios first so that they don't end up as the long tail
+parallelization_queue.sort(key=lambda x: -len(x[4][0]["scores"]))
+
+# raw per-seed results for 04-stat_tests.py, written as they come so that an interrupted run can be resumed
+with open(RAW_PATH, "w") as f:
+    for r in raw_rows:
+        f.write(json.dumps(r) + "\n")
+
+with multiprocessing.Pool(args.workers) as pool, open(RAW_PATH, "a") as f:
+    for method_name, results_local, data_name, data_seed, runtime_avg in tqdm.tqdm(
+        pool.imap_unordered(_my_compute_method_with_data, parallelization_queue),
+        total=len(parallelization_queue),
+    ):
+        rows = [
+            {
+                "method": method_name,
+                "scenario": data_name,
+                "data_seed": data_seed,
+                "budget_frac": round(float(budget_frac), 4),
+                **b_dict,
+                "time": runtime_avg,
+            }
+            for budget_frac, b_dict in zip(BUDGETS_FRAC, results_local)
+        ]
+        raw_rows.extend(rows)
+        f.write("".join(json.dumps(r) + "\n" for r in rows))
+        f.flush()
 
 # collate the results across data seeds
-grouped_results: dict[tuple[str, str], list[tuple[list[dict[str, float]], float]]] = {}
-for method_name, results_local, data_name, runtime_avg in results:
-    grouped_results.setdefault((method_name, data_name), []).append((results_local, runtime_avg))
+grouped_results: dict[tuple[str, str], list[dict]] = {}
+for r in raw_rows:
+    if r["data_seed"] < args.data_seeds:
+        grouped_results.setdefault((r["method"], r["scenario"]), []).append(r)
 
-for (method_name, data_name), seed_runs in tqdm.tqdm(grouped_results.items()):
-    existing_entry = results_out.get(method_name, {}).get(data_name, {})
-    existing_runtime = existing_entry.get("runtime") if isinstance(existing_entry, dict) else None
-
-    results_out[method_name][data_name] = {}
-    all_budget_results = [result for results_local, _ in seed_runs for result in results_local]
-    for key in all_budget_results[0]:
-        vals = [result[key] for result in all_budget_results if not np.isnan(result[key])]
-        results_out[method_name][data_name][key] = float(np.mean(vals)) if vals else float("nan")
-
-    if not args.no_reuse and existing_runtime is not None:
-        results_out[method_name][data_name]["time"] = existing_runtime
-    else:
-        results_out[method_name][data_name]["time"] = statistics.mean([rt for _, rt in seed_runs])
+METRIC_KEYS = ["corr_tau", "corr_wtau", "mae_model", "mae_item"]
+results_out: dict[str, dict[str, dict[str, float]]] = {}
+for (method_name, data_name), rows in tqdm.tqdm(grouped_results.items()):
+    entry = {}
+    for key in METRIC_KEYS:
+        vals = [r[key] for r in rows if not np.isnan(r[key])]
+        entry[key] = float(np.mean(vals)) if vals else float("nan")
+    entry["time"] = statistics.mean(r["time"] for r in rows)
+    results_out.setdefault(method_name, {})[data_name] = entry
 
 with open("computed/01-results_all.toml", "w") as f:
     toml.dump(results_out, f)

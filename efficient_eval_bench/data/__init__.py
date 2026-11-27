@@ -92,8 +92,11 @@ def load_data_synth(
         items_group = None
 
     if annotator_drift is not None:
+        n_annotators_total = [0]
+
         def _new_annotator():
-            return (random_annot.normal(0, annotator_drift.bias_scale), random_annot.uniform(*annotator_drift.noise_range))
+            n_annotators_total[0] += 1
+            return (random_annot.normal(0, annotator_drift.bias_scale), random_annot.uniform(*annotator_drift.noise_range), n_annotators_total[0] - 1)
 
         annotators = [_new_annotator() for _ in range(annotator_drift.n_annotators)]
 
@@ -110,7 +113,7 @@ def load_data_synth(
             t = item_i / max(1, items - 1)
             if random_annot.rand() < annotator_drift.replacement_rate:
                 annotators[random_annot.randint(len(annotators))] = _new_annotator()
-            annot_bias, annot_noise = annotators[random_annot.randint(len(annotators))]
+            annot_bias, annot_noise, annot_id = annotators[random_annot.randint(len(annotators))]
             annot_shift = annot_bias - annotator_drift.strictness_drift * t
             annot_noise = annot_noise + annotator_drift.inconsistency_drift * t
 
@@ -145,6 +148,7 @@ def load_data_synth(
         }
         if annotator_drift is not None:
             item_out["scores_true"] = scores_true_dict
+            item_out["annotator"] = annot_id  # type: ignore
         data_out.append(item_out)  # type: ignore
     return data_out
 
